@@ -1,10 +1,12 @@
 package org.example.inventorymanagementbackend.dto.response;
 
 import lombok.Data;
+import org.example.inventorymanagementbackend.entity.Supplier;
+
 import java.time.LocalDateTime;
 
 @Data
-public class SupplierResponse {
+public class SupplierResponse extends Supplier {
 
     private Long id;
     private String uniqueSupplierCode;

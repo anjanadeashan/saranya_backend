@@ -1,23 +1,32 @@
 package org.example.inventorymanagementbackend.config;
 
-import org.example.inventorymanagementbackend.entity.*;
-import org.example.inventorymanagementbackend.repository.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 
+import org.example.inventorymanagementbackend.entity.Customer;
+import org.example.inventorymanagementbackend.entity.Inventory;
+import org.example.inventorymanagementbackend.entity.Product;
+import org.example.inventorymanagementbackend.entity.Sale;
+import org.example.inventorymanagementbackend.entity.SaleItem;
+import org.example.inventorymanagementbackend.entity.Supplier;
+import org.example.inventorymanagementbackend.repository.CustomerRepository;
+import org.example.inventorymanagementbackend.repository.InventoryRepository;
+import org.example.inventorymanagementbackend.repository.ProductRepository;
+import org.example.inventorymanagementbackend.repository.SaleRepository;
+import org.example.inventorymanagementbackend.repository.SupplierRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+
 /**
  * Data Loader
- * Loads sample data on application startup
+ * Sample data loading is DISABLED
+ * To re-enable: uncomment @Component annotation and the code in run() method
  */
-@Component
+// @Component  // <-- COMMENTED OUT TO DISABLE SAMPLE DATA LOADING
 public class DataLoader implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DataLoader.class);
@@ -39,6 +48,15 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        logger.info("DataLoader is disabled - no sample data will be loaded. Database will remain empty.");
+        
+        /* 
+         * SAMPLE DATA LOADING CODE - COMMENTED OUT
+         * To re-enable sample data loading:
+         * 1. Uncomment the @Component annotation above
+         * 2. Uncomment this entire code block below
+         */
+        /*
         if (productRepository.count() == 0) {
             // Set system property to allow past check dates during data loading
             System.setProperty("spring.data.loading", "true");
@@ -54,6 +72,7 @@ public class DataLoader implements CommandLineRunner {
         } else {
             logger.info("Sample data already exists, skipping data loading.");
         }
+        */
     }
 
     private void loadSampleData() {

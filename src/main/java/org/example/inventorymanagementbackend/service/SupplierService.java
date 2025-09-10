@@ -1,5 +1,8 @@
 package org.example.inventorymanagementbackend.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.example.inventorymanagementbackend.dto.request.SupplierRequest;
 import org.example.inventorymanagementbackend.dto.response.SupplierResponse;
 import org.example.inventorymanagementbackend.entity.Supplier;
@@ -10,9 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional

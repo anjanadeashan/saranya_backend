@@ -1,5 +1,8 @@
 package org.example.inventorymanagementbackend.config;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.example.inventorymanagementbackend.security.JwtAuthenticationEntryPoint;
 import org.example.inventorymanagementbackend.security.JwtAuthenticationFilter;
 import org.example.inventorymanagementbackend.security.JwtTokenProvider;
@@ -21,9 +24,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -84,6 +84,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-resources/**").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
+                        
                         .anyRequest().authenticated()
                 );
 

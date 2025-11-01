@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -36,7 +37,6 @@ public class SecurityConfig {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    // Lazy initialization භාවිතා කරන්න
     private final UserDetailsService userDetailsService;
 
     @Autowired
@@ -72,9 +72,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
+                        // Public endpoints first - order matters!
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/customers/**").permitAll()  // Added this line
-                        .requestMatchers("/api/sales/**").permitAll()     // Add this line
+                        .requestMatchers("/api/customers/**").permitAll()
+                        .requestMatchers("/api/sales/**").permitAll()
                         .requestMatchers("/api/inventory/**").permitAll()
                         .requestMatchers("/api/suppliers/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
@@ -84,10 +86,12 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-resources/**").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
-                        
+                        .requestMatchers("/favicon.ico", "/static/**", "/public/**").permitAll()
+                        .requestMatchers("/error").permitAll() // Add this line
                         .anyRequest().authenticated()
                 );
 
+        // Only add JWT filter for authenticated endpoints
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         http.headers(headers -> headers

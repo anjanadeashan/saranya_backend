@@ -1,19 +1,34 @@
 package org.example.inventorymanagementbackend.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.example.inventorymanagementbackend.entity.Inventory;
-import org.example.inventorymanagementbackend.entity.SaleItem;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Product Entity
@@ -49,9 +64,9 @@ public class Product {
     private String description;
 
     @Column(name = "fixed_price", nullable = false, precision = 10, scale = 2)
-    @NotNull(message = "Fixed price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Fixed price must be greater than 0")
-    @Digits(integer = 8, fraction = 2, message = "Invalid price format")
+    //@NotNull(message = "Fixed price is required")
+    //@DecimalMin(value = "0.0", inclusive = false, message = "Fixed price must be greater than 0")
+   // @Digits(integer = 8, fraction = 2, message = "Invalid price format")
     private BigDecimal fixedPrice;
 
     @Column(precision = 5, scale = 2)
@@ -84,6 +99,25 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<SaleItem> saleItems;
+
+
+
+
+
+
+    @Column(name = "product_code", unique = true)
+private String productCode;
+
+public String getProductCode() {
+    return productCode;
+}
+
+public void setProductCode(String productCode) {
+    this.productCode = productCode;
+}
+
+
+
 
     // Business Logic Methods
 
@@ -145,7 +179,10 @@ public class Product {
         }
         if (currentStock == null) {
             currentStock = 0;
-        }
+            
+        }if (lowStockThreshold == null) {  // ADD THIS
+        lowStockThreshold = 0;
+    }
         if (discount == null) {
             discount = BigDecimal.ZERO;
         }

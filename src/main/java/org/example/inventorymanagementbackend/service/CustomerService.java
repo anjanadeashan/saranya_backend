@@ -1,5 +1,8 @@
 package org.example.inventorymanagementbackend.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.example.inventorymanagementbackend.dto.request.CustomerRequest;
 import org.example.inventorymanagementbackend.dto.response.CustomerResponse;
 import org.example.inventorymanagementbackend.entity.Customer;
@@ -10,9 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -86,4 +86,8 @@ public class CustomerService {
                 .filter(c -> c.getIsActive())
                 .orElseThrow(() -> new RuntimeException("Customer not found with id: " + id));
     }
+
+    public void updateCustomer(Customer customer) {
+    customerRepository.save(customer);
+}
 }

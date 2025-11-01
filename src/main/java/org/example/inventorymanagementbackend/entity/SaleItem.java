@@ -1,31 +1,24 @@
 package org.example.inventorymanagementbackend.entity;
 
-
-
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Sale Item Entity
- * Represents individual items in a sale transaction
- */
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
 @Entity
-@Table(name = "sale_items", indexes = {
-        @Index(name = "idx_sale_item_sale", columnList = "sale_id"),
-        @Index(name = "idx_sale_item_product", columnList = "product_id")
-})
-@EntityListeners(AuditingEntityListener.class)
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "sale_items")
 public class SaleItem {
 
     @Id
@@ -34,188 +27,140 @@ public class SaleItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sale_id", nullable = false)
-    @NotNull(message = "Sale is required")
     private Sale sale;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    @NotNull(message = "Product is required")
     private Product product;
 
-    @Column(nullable = false)
-    @NotNull(message = "Quantity is required")
+    @NotNull(message = "Quantity cannot be null")
     @Min(value = 1, message = "Quantity must be at least 1")
+    @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @NotNull(message = "Unit price cannot be null")
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
-    @NotNull(message = "Unit price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Unit price must be greater than 0")
-    @Digits(integer = 8, fraction = 2, message = "Invalid unit price format")
     private BigDecimal unitPrice;
 
-    @Column(precision = 5, scale = 2)
-    @DecimalMin(value = "0.0", message = "Discount cannot be negative")
-    @DecimalMax(value = "100.0", message = "Discount cannot exceed 100%")
+    @Column(name = "discount", precision = 10, scale = 2, columnDefinition = "DECIMAL(10,2) DEFAULT 0.00")
     private BigDecimal discount = BigDecimal.ZERO;
 
     @Column(name = "line_total", nullable = false, precision = 10, scale = 2)
-    @NotNull(message = "Line total is required")
-    @DecimalMin(value = "0.0", message = "Line total cannot be negative")
-    @Digits(integer = 8, fraction = 2, message = "Invalid line total format")
     private BigDecimal lineTotal;
 
-    @CreatedDate
+    // FIFO inventory tracking fields
+    @Column(name = "inventory_id")
+    private Long inventoryId;
+
+    // NEW: Track the unit price from the inventory batch (FIFO cost tracking)
+    @Column(name = "inventory_unit_price", precision = 10, scale = 2)
+    private BigDecimal inventoryUnitPrice;
+
+    // NEW: Track the date from the inventory batch (FIFO batch date)
+    @Column(name = "inventory_date")
+    private LocalDateTime inventoryDate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Business Logic Methods
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    /**
-     * Calculate line total based on quantity, unit price, and discount
-     */
-    public BigDecimal calculateLineTotal() {
-        if (quantity == null || unitPrice == null) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-
-        if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal discountAmount = subtotal.multiply(discount)
-                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-            subtotal = subtotal.subtract(discountAmount);
-        }
-
-        return subtotal;
+    // Constructors
+    public SaleItem() {
     }
 
-    /**
-     * Calculate discount amount
-     */
-    public BigDecimal getDiscountAmount() {
-        if (quantity == null || unitPrice == null || discount == null ||
-                discount.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        return subtotal.multiply(discount)
-                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+    public SaleItem(Sale sale, Product product, Integer quantity, BigDecimal unitPrice) {
+        this.sale = sale;
+        this.product = product;
+        setQuantity(quantity);  // Use setter for validation
+        setUnitPrice(unitPrice);  // Use setter for validation
+        this.discount = BigDecimal.ZERO;
+        updateLineTotal();
     }
 
-    /**
-     * Get unit price after discount
-     */
-    public BigDecimal getDiscountedUnitPrice() {
-        if (unitPrice == null) {
-            return BigDecimal.ZERO;
-        }
-
-        if (discount == null || discount.compareTo(BigDecimal.ZERO) == 0) {
-            return unitPrice;
-        }
-
-        BigDecimal discountAmount = unitPrice.multiply(discount)
-                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-        return unitPrice.subtract(discountAmount);
+    // Enhanced constructor with inventory tracking
+    public SaleItem(Sale sale, Product product, Integer quantity, BigDecimal unitPrice, 
+                   Long inventoryId, BigDecimal inventoryUnitPrice, LocalDateTime inventoryDate) {
+        this(sale, product, quantity, unitPrice);
+        this.inventoryId = inventoryId;
+        this.inventoryUnitPrice = inventoryUnitPrice;
+        this.inventoryDate = inventoryDate;
     }
 
-    /**
-     * Get subtotal before discount
-     */
-    public BigDecimal getSubtotalBeforeDiscount() {
-        if (quantity == null || unitPrice == null) {
-            return BigDecimal.ZERO;
-        }
-        return unitPrice.multiply(BigDecimal.valueOf(quantity));
-    }
-
-    /**
-     * Update line total
-     */
-    public void updateLineTotal() {
-        this.lineTotal = calculateLineTotal();
-    }
-
-    /**
-     * Validate sale item
-     */
-    public void validateSaleItem() {
-        if (product == null) {
-            throw new IllegalStateException("Product is required");
-        }
-
-        if (quantity == null || quantity <= 0) {
-            throw new IllegalStateException("Quantity must be positive");
-        }
-
-        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalStateException("Unit price must be positive");
-        }
-
-        if (discount != null && (discount.compareTo(BigDecimal.ZERO) < 0 ||
-                discount.compareTo(BigDecimal.valueOf(100)) > 0)) {
-            throw new IllegalStateException("Discount must be between 0 and 100");
-        }
-    }
-
-    /**
-     * Check if product has sufficient stock
-     */
-    public boolean hasProductSufficientStock() {
-        return product != null && product.hasSufficientStock(quantity);
-    }
-
-    /**
-     * Get sale item description
-     */
-    public String getSaleItemDescription() {
-        StringBuilder description = new StringBuilder();
-
-        if (product != null) {
-            description.append(product.getName())
-                    .append(" (").append(product.getCode()).append(")");
-        }
-
-        description.append(" - Qty: ").append(quantity);
-        description.append(" @ $").append(unitPrice);
-
-        if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
-            description.append(" (").append(discount).append("% off)");
-        }
-
-        description.append(" = $").append(lineTotal);
-
-        return description.toString();
-    }
-
+    // Lifecycle methods
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-        if (discount == null) {
-            discount = BigDecimal.ZERO;
-        }
-
-        // Validate business rules
-        validateSaleItem();
-
-        // Calculate line total if not set
-        if (lineTotal == null) {
-            updateLineTotal();
-        }
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        validateAndUpdateLineTotal();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        // Validate business rules on update
-        validateSaleItem();
-
-        // Recalculate line total
-        updateLineTotal();
+        this.updatedAt = LocalDateTime.now();
+        validateAndUpdateLineTotal();
     }
 
+    // Enhanced business methods with validation
+    public void updateLineTotal() {
+        validateAndUpdateLineTotal();
+    }
+
+    private void validateAndUpdateLineTotal() {
+        // Validate before calculating
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero, got: " + quantity);
+        }
+        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Unit price must be greater than zero, got: " + unitPrice);
+        }
+
+        try {
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
+            BigDecimal effectiveDiscount = (discount != null) ? discount : BigDecimal.ZERO;
+            this.lineTotal = subtotal.subtract(effectiveDiscount);
+
+            // Ensure line total is not negative
+            if (this.lineTotal.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Line total cannot be negative. Check discount amount.");
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error calculating line total: " + e.getMessage(), e);
+        }
+    }
+
+    // FIFO Business Methods
+    
+    /**
+     * Calculate the cost of goods sold (COGS) for this sale item using FIFO inventory price
+     */
+    public BigDecimal calculateCOGS() {
+        if (inventoryUnitPrice == null || quantity == null) {
+            return BigDecimal.ZERO;
+        }
+        return inventoryUnitPrice.multiply(BigDecimal.valueOf(quantity));
+    }
+
+    /**
+     * Calculate gross profit for this sale item (Sale Price - FIFO Cost)
+     */
+    public BigDecimal calculateGrossProfit() {
+        if (lineTotal == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal cogs = calculateCOGS();
+        return lineTotal.subtract(cogs);
+    }
+
+    /**
+     * Check if this sale item has inventory tracking information
+     */
+    public boolean hasInventoryTracking() {
+        return inventoryId != null;
+    }
+
+    // Getters and Setters with validation
     public Long getId() {
         return id;
     }
@@ -245,7 +190,20 @@ public class SaleItem {
     }
 
     public void setQuantity(Integer quantity) {
+        // Validate quantity before setting
+        if (quantity == null) {
+            throw new IllegalArgumentException("Quantity cannot be null");
+        }
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero, got: " + quantity);
+        }
+        
         this.quantity = quantity;
+        
+        // Only update line total if other required fields are set
+        if (this.unitPrice != null) {
+            updateLineTotal();
+        }
     }
 
     public BigDecimal getUnitPrice() {
@@ -253,15 +211,38 @@ public class SaleItem {
     }
 
     public void setUnitPrice(BigDecimal unitPrice) {
+        // Validate unit price before setting
+        if (unitPrice == null) {
+            throw new IllegalArgumentException("Unit price cannot be null");
+        }
+        if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Unit price must be greater than zero, got: " + unitPrice);
+        }
+        
         this.unitPrice = unitPrice;
+        
+        // Only update line total if other required fields are set
+        if (this.quantity != null && this.quantity > 0) {
+            updateLineTotal();
+        }
     }
 
     public BigDecimal getDiscount() {
-        return discount;
+        return discount != null ? discount : BigDecimal.ZERO;
     }
 
     public void setDiscount(BigDecimal discount) {
-        this.discount = discount;
+        this.discount = (discount != null) ? discount : BigDecimal.ZERO;
+        
+        // Validate discount is not negative
+        if (this.discount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Discount cannot be negative, got: " + discount);
+        }
+        
+        // Update line total if other fields are set
+        if (this.unitPrice != null && this.quantity != null && this.quantity > 0) {
+            updateLineTotal();
+        }
     }
 
     public BigDecimal getLineTotal() {
@@ -272,11 +253,105 @@ public class SaleItem {
         this.lineTotal = lineTotal;
     }
 
+    public Long getInventoryId() {
+        return inventoryId;
+    }
+
+    public void setInventoryId(Long inventoryId) {
+        this.inventoryId = inventoryId;
+    }
+
+    // NEW: Getters and setters for inventory tracking fields
+    public BigDecimal getInventoryUnitPrice() {
+        return inventoryUnitPrice;
+    }
+
+    public void setInventoryUnitPrice(BigDecimal inventoryUnitPrice) {
+        this.inventoryUnitPrice = inventoryUnitPrice;
+    }
+
+    public LocalDateTime getInventoryDate() {
+        return inventoryDate;
+    }
+
+    public void setInventoryDate(LocalDateTime inventoryDate) {
+        this.inventoryDate = inventoryDate;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    // Utility methods
+    public boolean isValid() {
+        return quantity != null && quantity > 0 &&
+               unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0 &&
+               (discount == null || discount.compareTo(BigDecimal.ZERO) >= 0);
+    }
+
+    /**
+     * Get a summary description for this sale item
+     */
+    public String getItemSummary() {
+        StringBuilder summary = new StringBuilder();
+        
+        if (product != null) {
+            summary.append(product.getName()).append(" ");
+        }
+        
+        summary.append("(Qty: ").append(quantity)
+               .append(", Unit Price: ").append(unitPrice);
+        
+        if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
+            summary.append(", Discount: ").append(discount);
+        }
+        
+        summary.append(", Total: ").append(lineTotal).append(")");
+        
+        if (hasInventoryTracking()) {
+            summary.append(" [FIFO Batch: ").append(inventoryId).append("]");
+        }
+        
+        return summary.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "SaleItem{" +
+                "id=" + id +
+                ", quantity=" + quantity +
+                ", unitPrice=" + unitPrice +
+                ", discount=" + discount +
+                ", lineTotal=" + lineTotal +
+                ", inventoryId=" + inventoryId +
+                ", inventoryUnitPrice=" + inventoryUnitPrice +
+                ", inventoryDate=" + inventoryDate +
+                ", createdAt=" + createdAt +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SaleItem)) return false;
+        SaleItem saleItem = (SaleItem) o;
+        return id != null && id.equals(saleItem.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

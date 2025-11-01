@@ -1,24 +1,45 @@
 package org.example.inventorymanagementbackend.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Inventory Entity
- * Represents stock movements in the inventory system
+ * Represents stock movements and batches in the FIFO inventory system
  */
 @Entity
 @Table(name = "inventory", indexes = {
         @Index(name = "idx_inventory_product", columnList = "product_id"),
         @Index(name = "idx_inventory_date", columnList = "date"),
-        @Index(name = "idx_inventory_movement_type", columnList = "movementType")
+        @Index(name = "idx_inventory_movement_type", columnList = "movementType"),
+        @Index(name = "idx_inventory_product_date", columnList = "product_id, date") // For FIFO queries
 })
 @EntityListeners(AuditingEntityListener.class)
 @Data
@@ -36,9 +57,10 @@ public class Inventory {
     @NotNull(message = "Product is required")
     private Product product;
 
+    // FIXED: Allow 0 quantity for depleted batches in FIFO
     @Column(nullable = false)
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @Min(value = 0, message = "Quantity cannot be negative")
+    @NotNull(message = "Quantity cannot be null")
     private Integer quantity;
 
     @Enumerated(EnumType.STRING)
@@ -46,7 +68,12 @@ public class Inventory {
     @NotNull(message = "Movement type is required")
     private MovementType movementType;
 
-    // Supplier relationship - OPTIONAL (only for IN movements)
+    // Unit price for this inventory batch
+    @Column(name = "unit_price", precision = 15, scale = 2)
+    @DecimalMin(value = "0.0", inclusive = true, message = "Unit price must be non-negative")
+    private BigDecimal unitPrice;
+
+    // Supplier relationship - OPTIONAL (only for IN movements typically)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
@@ -63,10 +90,37 @@ public class Inventory {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+
+    // Add these fields to your Inventory entity class
+
+@Column(name = "expiry_date")
+private LocalDate expiryDate;
+
+@Column(name = "minimum_stock")
+private Integer minimumStock;
+
+// Add getters and setters
+public LocalDate getExpiryDate() {
+    return expiryDate;
+}
+
+public void setExpiryDate(LocalDate expiryDate) {
+    this.expiryDate = expiryDate;
+}
+
+public Integer getMinimumStock() {
+    return minimumStock;
+}
+
+public void setMinimumStock(Integer minimumStock) {
+    this.minimumStock = minimumStock;
+}
+
     // Movement Type Enum
     public enum MovementType {
         IN("Stock In"),
-        OUT("Stock Out");
+        OUT("Stock Out"),
+        ADJUSTMENT("Stock Adjustment");
 
         private final String displayName;
 
@@ -80,6 +134,16 @@ public class Inventory {
     }
 
     // Business Logic Methods
+
+    /**
+     * Calculate total value for this inventory batch
+     */
+    public BigDecimal getTotalValue() {
+        if (unitPrice == null || quantity == null) {
+            return BigDecimal.ZERO;
+        }
+        return unitPrice.multiply(BigDecimal.valueOf(quantity));
+    }
 
     /**
      * Check if this is a stock IN movement
@@ -96,17 +160,66 @@ public class Inventory {
     }
 
     /**
-     * Get movement description
+     * Check if this inventory batch is depleted (quantity = 0)
+     */
+    public boolean isDepleted() {
+        return quantity != null && quantity == 0;
+    }
+
+    /**
+     * Check if this inventory batch has available stock
+     */
+    public boolean hasAvailableStock() {
+        return quantity != null && quantity > 0;
+    }
+
+    /**
+     * Reduce quantity by the specified amount (for FIFO operations)
+     */
+    public void reduceQuantity(int amount) {
+        if (quantity == null) {
+            throw new IllegalStateException("Cannot reduce quantity: current quantity is null");
+        }
+        if (amount < 0) {
+            throw new IllegalArgumentException("Cannot reduce by negative amount: " + amount);
+        }
+        if (amount > quantity) {
+            throw new IllegalArgumentException("Cannot reduce quantity by " + amount + 
+                ": only " + quantity + " available");
+        }
+        this.quantity = quantity - amount;
+    }
+
+    /**
+     * Add quantity (for stock returns or adjustments)
+     */
+    public void addQuantity(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Cannot add negative quantity: " + amount);
+        }
+        if (quantity == null) {
+            this.quantity = amount;
+        } else {
+            this.quantity = quantity + amount;
+        }
+    }
+
+    /**
+     * Get movement description for logging and display
      */
     public String getMovementDescription() {
         StringBuilder description = new StringBuilder();
         description.append(movementType.getDisplayName())
                 .append(" - ")
-                .append(quantity)
+                .append(quantity != null ? quantity : 0)
                 .append(" units");
 
         if (product != null) {
             description.append(" of ").append(product.getName());
+        }
+
+        if (unitPrice != null) {
+            description.append(" at ").append(unitPrice).append(" each");
         }
 
         if (isStockIn() && supplier != null) {
@@ -121,23 +234,46 @@ public class Inventory {
     }
 
     /**
-     * Validate movement constraints
+     * FIXED: Validate inventory movement with proper FIFO support
      */
-    public void validateMovement() {
-        if (movementType == MovementType.IN && supplier == null) {
-            throw new IllegalStateException("Supplier is required for stock IN movements");
+    private void validateMovement() {
+        if (quantity == null) {
+            throw new IllegalStateException("Quantity cannot be null");
         }
-
-        if (movementType == MovementType.OUT && supplier != null) {
-            throw new IllegalStateException("Supplier should not be specified for stock OUT movements");
+        
+        // Allow 0 quantity for depleted FIFO batches, but not negative
+        if (quantity < 0) {
+            throw new IllegalStateException("Quantity cannot be negative, got: " + quantity);
         }
-
-        if (quantity == null || quantity <= 0) {
-            throw new IllegalStateException("Quantity must be positive");
+        
+        // For new IN movements, quantity should be > 0
+        if (movementType == MovementType.IN && id == null && quantity <= 0) {
+            throw new IllegalStateException("New IN movement quantity must be greater than zero, got: " + quantity);
         }
+        
+        // Unit price validation
+        if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Unit price cannot be negative");
+        }
+        
+        // For IN movements, unit price is typically required (but can be flexible)
+        if (movementType == MovementType.IN && id == null && unitPrice == null) {
+            throw new IllegalStateException("Unit price is required for new IN movements");
+        }
+        
+        // Supplier requirement is more flexible - not all IN movements need suppliers
+        // (e.g., returns, transfers, adjustments)
+    }
 
+    /**
+     * Validate for FIFO batch operations specifically
+     */
+    public void validateForFIFO() {
         if (product == null) {
-            throw new IllegalStateException("Product is required");
+            throw new IllegalStateException("Product is required for FIFO operations");
+        }
+        if (date == null) {
+            throw new IllegalStateException("Date is required for FIFO operations");
         }
     }
 
@@ -156,10 +292,18 @@ public class Inventory {
 
     @PreUpdate
     protected void onUpdate() {
-        // Validate business rules on update
-        validateMovement();
+        // More lenient validation on update to allow FIFO quantity changes
+        if (quantity != null && quantity < 0) {
+            throw new IllegalStateException("Quantity cannot be negative during update: " + quantity);
+        }
+        
+        if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Unit price cannot be negative during update");
+        }
     }
 
+    // Explicit Getters and Setters (ensuring proper access)
+    
     public Long getId() {
         return id;
     }
@@ -192,6 +336,14 @@ public class Inventory {
         this.movementType = movementType;
     }
 
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
     public Supplier getSupplier() {
         return supplier;
     }
@@ -222,5 +374,31 @@ public class Inventory {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    // Utility methods for debugging
+    @Override
+    public String toString() {
+        return "Inventory{" +
+                "id=" + id +
+                ", product=" + (product != null ? product.getName() : "null") +
+                ", quantity=" + quantity +
+                ", movementType=" + movementType +
+                ", unitPrice=" + unitPrice +
+                ", date=" + date +
+                "}";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Inventory)) return false;
+        Inventory inventory = (Inventory) o;
+        return id != null && id.equals(inventory.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

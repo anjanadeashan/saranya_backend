@@ -1,16 +1,17 @@
 package org.example.inventorymanagementbackend.repository;
 
-import org.example.inventorymanagementbackend.entity.Sale;
-import org.example.inventorymanagementbackend.entity.Customer;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.example.inventorymanagementbackend.entity.Customer;
+import org.example.inventorymanagementbackend.entity.Sale;
+import org.example.inventorymanagementbackend.entity.Sale.PaymentMethod;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, Long> {
@@ -57,5 +58,10 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     List<Sale> findWithFilters(@Param("customerId") Long customerId,
                                @Param("paymentMethod") Sale.PaymentMethod paymentMethod,
                                @Param("isPaid") Boolean isPaid);
+
+
+                               // Add this method to your existing SaleRepository.java interface
+
+List<Sale> findByPaymentMethodAndCheckBouncedTrue(PaymentMethod paymentMethod);
 }
 

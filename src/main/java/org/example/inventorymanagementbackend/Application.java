@@ -23,7 +23,7 @@ public class Application {
         System.out.println("Inventory Management System Started!");
         System.out.println("API Base URL: http://localhost:8080/api");
         System.out.println("H2 Console: http://localhost:8080/h2-console");
-        System.out.println("Admin Credentials: admin/admin123");
+       
         System.out.println("========================================");
     }
 }

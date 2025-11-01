@@ -33,11 +33,20 @@ public class SupplierController {
     @Autowired
     private SupplierService supplierService;
 
+    
     @GetMapping
     public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllSuppliers() {
         try {
+            logger.info("Getting all suppliers - Request received");
             List<SupplierResponse> suppliers = supplierService.getAllSuppliers();
-            return ResponseEntity.ok(ApiResponse.success(suppliers));
+            
+            logger.info("Successfully retrieved {} suppliers", suppliers != null ? suppliers.size() : 0);
+            logger.debug("Suppliers data: {}", suppliers);
+            
+            ApiResponse<List<SupplierResponse>> response = ApiResponse.success(suppliers);
+            logger.debug("API Response: {}", response);
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching suppliers", e);
             return ResponseEntity.internalServerError()

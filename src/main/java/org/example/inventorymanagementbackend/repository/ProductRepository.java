@@ -2,15 +2,16 @@ package org.example.inventorymanagementbackend.repository;
 
 
 
-import org.example.inventorymanagementbackend.entity.Product;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+
+import org.example.inventorymanagementbackend.entity.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 /**
  * Repository interface for Product entity
@@ -123,4 +124,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                            @Param("name") String name,
                                            @Param("minPrice") BigDecimal minPrice,
                                            @Param("maxPrice") BigDecimal maxPrice);
+
+
+                                           /**
+ * Update only the stock field for better performance
+ */
+@Modifying
+@Query("UPDATE Product p SET p.currentStock = :newStock WHERE p.id = :productId")
+void updateProductStockOnly(@Param("productId") Long productId, @Param("newStock") Integer newStock);
 }

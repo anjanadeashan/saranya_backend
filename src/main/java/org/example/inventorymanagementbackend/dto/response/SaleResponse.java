@@ -1,12 +1,13 @@
 package org.example.inventorymanagementbackend.dto.response;
 
-import org.example.inventorymanagementbackend.entity.Sale;
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.example.inventorymanagementbackend.entity.Sale;
+
+import lombok.Data;
 
 @Data
 public class SaleResponse {
@@ -28,6 +29,9 @@ public class SaleResponse {
     private Boolean isCheckOverdue;
     private Boolean isCheckDueSoon;
     private String saleDescription;
+    private Boolean checkBounced;
+    private LocalDateTime checkBouncedDate;
+    private String checkBouncedNotes;
 
     public Long getId() {
         return id;
@@ -172,4 +176,27 @@ public class SaleResponse {
     public void setSaleDescription(String saleDescription) {
         this.saleDescription = saleDescription;
     }
+
+
+public void setCheckBounced(boolean checkBounced) {
+    this.checkBounced = checkBounced;
+}
+
+public LocalDateTime getCheckBouncedDate() {
+    return checkBouncedDate;
+}
+
+public void setCheckBouncedDate(LocalDateTime checkBouncedDate) {
+    this.checkBouncedDate = checkBouncedDate;
+}
+
+public String getCheckBouncedNotes() {
+    return checkBouncedNotes;
+}
+
+public void setCheckBouncedNotes(String checkBouncedNotes) {
+    this.checkBouncedNotes = checkBouncedNotes;
+}
+
+
 }

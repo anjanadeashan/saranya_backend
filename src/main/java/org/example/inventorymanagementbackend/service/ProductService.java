@@ -1,6 +1,8 @@
 package org.example.inventorymanagementbackend.service;
 
-
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.example.inventorymanagementbackend.dto.request.ProductRequest;
 import org.example.inventorymanagementbackend.dto.response.ProductResponse;
@@ -12,9 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Product Service
@@ -99,53 +98,76 @@ public class ProductService {
     /**
      * Create new product
      */
-    public ProductResponse createProduct(ProductRequest request) {
-        logger.debug("Creating product with code: {}", request.getCode());
+    /**
+ * Create new product with manual mapping to ensure all fields are set
+ */
+public ProductResponse createProduct(ProductRequest request) {
+    logger.debug("Creating product with code: {}", request.getCode());
 
-        // Validate unique code
-        if (productRepository.existsByCodeIgnoreCase(request.getCode())) {
-            throw new IllegalArgumentException("Product code already exists: " + request.getCode());
-        }
-
-        Product product = productMapper.toEntity(request);
-        product.setIsActive(true);
-        product.setCurrentStock(0); // New products start with 0 stock
-
-        Product savedProduct = productRepository.save(product);
-        logger.info("Product created successfully with id: {} and code: {}",
-                savedProduct.getId(), savedProduct.getCode());
-
-        return productMapper.toResponse(savedProduct);
+    // Validate unique code
+    if (productRepository.existsByCodeIgnoreCase(request.getCode())) {
+        throw new IllegalArgumentException("Product code already exists: " + request.getCode());
     }
+
+    // Manual mapping to ensure all fields are properly set
+    Product product = new Product();
+    product.setCode(request.getCode());
+    product.setName(request.getName());
+    product.setDescription(request.getDescription());
+    product.setFixedPrice(request.getFixedPrice());
+    product.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+    product.setCurrentStock(request.getCurrentStock() != null ? request.getCurrentStock() : 0);
+    product.setLowStockThreshold(request.getLowStockThreshold() != null ? request.getLowStockThreshold() : 0);
+    product.setIsActive(true);
+    
+    logger.debug("Product being created - currentStock: {}, lowStockThreshold: {}", 
+            product.getCurrentStock(), product.getLowStockThreshold());
+
+    Product savedProduct = productRepository.save(product);
+    logger.info("Product created successfully with id: {} and code: {}, initial stock: {}, threshold: {}",
+            savedProduct.getId(), savedProduct.getCode(), savedProduct.getCurrentStock(), savedProduct.getLowStockThreshold());
+
+    return productMapper.toResponse(savedProduct);
+}
 
     /**
      * Update product
      */
-    public ProductResponse updateProduct(Long id, ProductRequest request) {
-        logger.debug("Updating product with id: {}", id);
+    /**
+ * Update product
+ */
+public ProductResponse updateProduct(Long id, ProductRequest request) {
+    logger.debug("Updating product with id: {}", id);
 
-        Product existingProduct = productRepository.findById(id)
-                .filter(p -> p.getIsActive())
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+    Product existingProduct = productRepository.findById(id)
+            .filter(p -> p.getIsActive())
+            .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
 
-        // Validate unique code (excluding current product)
-        if (productRepository.existsByCodeIgnoreCaseAndIdNot(request.getCode(), id)) {
-            throw new IllegalArgumentException("Product code already exists: " + request.getCode());
-        }
-
-        // Update fields
-        existingProduct.setCode(request.getCode());
-        existingProduct.setName(request.getName());
-        existingProduct.setDescription(request.getDescription());
-        existingProduct.setFixedPrice(request.getFixedPrice());
-        existingProduct.setDiscount(request.getDiscount());
-        existingProduct.setLowStockThreshold(request.getLowStockThreshold());
-
-        Product savedProduct = productRepository.save(existingProduct);
-        logger.info("Product updated successfully with id: {}", savedProduct.getId());
-
-        return productMapper.toResponse(savedProduct);
+    // Validate unique code (excluding current product)
+    if (productRepository.existsByCodeIgnoreCaseAndIdNot(request.getCode(), id)) {
+        throw new IllegalArgumentException("Product code already exists: " + request.getCode());
     }
+
+    // Update fields - INCLUDING currentStock
+    existingProduct.setCode(request.getCode());
+    existingProduct.setName(request.getName());
+    existingProduct.setDescription(request.getDescription());
+    existingProduct.setFixedPrice(request.getFixedPrice());
+    existingProduct.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+    existingProduct.setLowStockThreshold(request.getLowStockThreshold() != null ? request.getLowStockThreshold() : 0);
+    
+    // ✅ ADD THIS LINE - Update currentStock
+    if (request.getCurrentStock() != null) {
+        existingProduct.setCurrentStock(request.getCurrentStock());
+        logger.debug("Updating product stock to: {}", request.getCurrentStock());
+    }
+
+    Product savedProduct = productRepository.save(existingProduct);
+    logger.info("Product updated successfully with id: {}, new stock: {}", 
+            savedProduct.getId(), savedProduct.getCurrentStock());
+
+    return productMapper.toResponse(savedProduct);
+}
 
     /**
      * Delete product (soft delete)
@@ -203,4 +225,65 @@ public class ProductService {
                 .filter(p -> p.getIsActive())
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
+
+    /**
+     * Save product entity (used by other services for FIFO inventory management)
+     * This method is required by SaleService for updating product stock during FIFO processing
+     */
+    public Product saveProduct(Product product) {
+        logger.debug("Saving product entity with id: {}", product.getId());
+        Product savedProduct = productRepository.save(product);
+        logger.debug("Product saved successfully with id: {}, current stock: {}", 
+                savedProduct.getId(), savedProduct.getCurrentStock());
+        return savedProduct;
+    }
+
+    /**
+     * Get product entity by ID without active filter (for internal repository operations)
+     */
+    @Transactional(readOnly = true)
+    public Product getProductEntityByIdUnfiltered(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+    }
+
+    /**
+     * Check if product exists by ID
+     */
+    @Transactional(readOnly = true)
+    public boolean existsById(Long id) {
+        return productRepository.existsById(id);
+    }
+
+    /**
+     * Get current stock for a product
+     */
+    @Transactional(readOnly = true)
+    public Integer getCurrentStock(Long productId) {
+        Product product = getProductEntityById(productId);
+        return product.getCurrentStock();
+    }
+
+    /**
+     * Update only the current stock of a product (optimized for frequent stock updates)
+     */
+    public void updateCurrentStock(Long productId, Integer newStock) {
+        logger.debug("Updating current stock for product id: {} to: {}", productId, newStock);
+        
+        Product product = getProductEntityById(productId);
+        product.setCurrentStock(newStock);
+        
+        productRepository.save(product);
+        logger.debug("Current stock updated for product id: {}, new stock: {}", productId, newStock);
+    }
+    /**
+ * Update only product stock without other fields (optimized for performance)
+ */
+public void updateProductStockOnly(Long productId, Integer newStock) {
+    logger.debug("Updating only stock for product id: {} to: {}", productId, newStock);
+    
+    // Use a direct query for better performance
+    productRepository.updateProductStockOnly(productId, newStock);
+    logger.debug("Stock only updated for product id: {}", productId);
+}
 }

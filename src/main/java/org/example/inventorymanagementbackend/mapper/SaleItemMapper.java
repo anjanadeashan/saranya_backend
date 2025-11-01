@@ -1,21 +1,57 @@
 package org.example.inventorymanagementbackend.mapper;
 
 import org.example.inventorymanagementbackend.dto.response.SaleItemResponse;
+import org.example.inventorymanagementbackend.entity.Inventory;
 import org.example.inventorymanagementbackend.entity.SaleItem;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
+import org.example.inventorymanagementbackend.repository.InventoryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface SaleItemMapper {
+@Component
+public class SaleItemMapper {
 
-    @Mapping(target = "saleId", source = "sale.id")
-    @Mapping(target = "productId", source = "product.id")
-    @Mapping(target = "productCode", source = "product.code")
-    @Mapping(target = "productName", source = "product.name")
-    @Mapping(target = "discountAmount", expression = "java(saleItem.getDiscountAmount())")
-    @Mapping(target = "discountedUnitPrice", expression = "java(saleItem.getDiscountedUnitPrice())")
-    @Mapping(target = "subtotalBeforeDiscount", expression = "java(saleItem.getSubtotalBeforeDiscount())")
-    @Mapping(target = "saleItemDescription", expression = "java(saleItem.getSaleItemDescription())")
-    SaleItemResponse toResponse(SaleItem saleItem);
+    @Autowired
+    private InventoryRepository inventoryRepository;
+
+    public SaleItemResponse toResponse(SaleItem saleItem) {
+        if (saleItem == null) {
+            return null;
+        }
+
+        SaleItemResponse response = new SaleItemResponse();
+        response.setId(saleItem.getId());
+        response.setSaleId(saleItem.getSale().getId());
+        response.setProductId(saleItem.getProduct().getId());
+        response.setProductCode(saleItem.getProduct().getCode());
+        response.setProductName(saleItem.getProduct().getName());
+        response.setQuantity(saleItem.getQuantity());
+        response.setUnitPrice(saleItem.getUnitPrice());
+        response.setDiscount(saleItem.getDiscount());
+        response.setLineTotal(saleItem.getLineTotal());
+        response.setInventoryId(saleItem.getInventoryId());
+        response.setCreatedAt(saleItem.getCreatedAt());
+        response.setUpdatedAt(saleItem.getUpdatedAt());
+
+        // Fetch inventory batch details if inventory ID exists
+        if (saleItem.getInventoryId() != null) {
+            inventoryRepository.findById(saleItem.getInventoryId())
+                    .ifPresent(inventory -> {
+                        response.setInventoryUnitPrice(inventory.getUnitPrice());
+                        response.setInventoryDate(inventory.getDate());
+                    });
+        }
+
+        return response;
+    }
+
+    public SaleItemResponse toResponseWithInventory(SaleItem saleItem, Inventory inventory) {
+        SaleItemResponse response = toResponse(saleItem);
+        
+        if (inventory != null) {
+            response.setInventoryUnitPrice(inventory.getUnitPrice());
+            response.setInventoryDate(inventory.getDate());
+        }
+        
+        return response;
+    }
 }

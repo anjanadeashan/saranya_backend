@@ -1,19 +1,39 @@
 package org.example.inventorymanagementbackend.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Sale Entity
@@ -47,8 +67,9 @@ public class Sale {
 
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     @NotNull(message = "Total amount is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Total amount must be greater than 0")
+    @DecimalMin(value = "0.1", message = "Total amount must be greater than 0")
     @Digits(integer = 8, fraction = 2, message = "Invalid total amount format")
+    
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
@@ -82,6 +103,15 @@ public class Sale {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "check_bounced")
+private boolean checkBounced = false;
+
+@Column(name = "check_bounced_date")
+private LocalDateTime checkBouncedDate;
+
+@Column(name = "check_bounced_notes", length = 500)
+private String checkBouncedNotes;
 
     // Relationships
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
@@ -394,4 +424,28 @@ public class Sale {
     public void setSaleItems(List<SaleItem> saleItems) {
         this.saleItems = saleItems;
     }
+
+    public boolean isCheckBounced() {
+    return checkBounced;
+}
+
+public void setCheckBounced(boolean checkBounced) {
+    this.checkBounced = checkBounced;
+}
+
+public LocalDateTime getCheckBouncedDate() {
+    return checkBouncedDate;
+}
+
+public void setCheckBouncedDate(LocalDateTime checkBouncedDate) {
+    this.checkBouncedDate = checkBouncedDate;
+}
+
+public String getCheckBouncedNotes() {
+    return checkBouncedNotes;
+}
+
+public void setCheckBouncedNotes(String checkBouncedNotes) {
+    this.checkBouncedNotes = checkBouncedNotes;
+}
 }

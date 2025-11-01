@@ -1,12 +1,10 @@
 package org.example.inventorymanagementbackend.dto.response;
 
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Data
 public class SaleItemResponse {
+
     private Long id;
     private Long saleId;
     private Long productId;
@@ -16,29 +14,20 @@ public class SaleItemResponse {
     private BigDecimal unitPrice;
     private BigDecimal discount;
     private BigDecimal lineTotal;
+    
+    // New field for FIFO tracking
+    private Long inventoryId;
+    private BigDecimal inventoryUnitPrice; // Purchase price from inventory batch
+    private LocalDateTime inventoryDate; // Date when this batch was received
+    
     private LocalDateTime createdAt;
-    private BigDecimal discountAmount;
-    private BigDecimal discountedUnitPrice;
-    private BigDecimal subtotalBeforeDiscount;
-    private String saleItemDescription;
+    private LocalDateTime updatedAt;
 
-    public SaleItemResponse(Long id, Long saleId, Long productId, String productCode, String productName, Integer quantity, BigDecimal unitPrice, BigDecimal discount, BigDecimal lineTotal, LocalDateTime createdAt, BigDecimal discountAmount, BigDecimal discountedUnitPrice, BigDecimal subtotalBeforeDiscount, String saleItemDescription) {
-        this.id = id;
-        this.saleId = saleId;
-        this.productId = productId;
-        this.productCode = productCode;
-        this.productName = productName;
-        this.quantity = quantity;
-        this.unitPrice = unitPrice;
-        this.discount = discount;
-        this.lineTotal = lineTotal;
-        this.createdAt = createdAt;
-        this.discountAmount = discountAmount;
-        this.discountedUnitPrice = discountedUnitPrice;
-        this.subtotalBeforeDiscount = subtotalBeforeDiscount;
-        this.saleItemDescription = saleItemDescription;
+    // Constructors
+    public SaleItemResponse() {
     }
 
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -111,6 +100,30 @@ public class SaleItemResponse {
         this.lineTotal = lineTotal;
     }
 
+    public Long getInventoryId() {
+        return inventoryId;
+    }
+
+    public void setInventoryId(Long inventoryId) {
+        this.inventoryId = inventoryId;
+    }
+
+    public BigDecimal getInventoryUnitPrice() {
+        return inventoryUnitPrice;
+    }
+
+    public void setInventoryUnitPrice(BigDecimal inventoryUnitPrice) {
+        this.inventoryUnitPrice = inventoryUnitPrice;
+    }
+
+    public LocalDateTime getInventoryDate() {
+        return inventoryDate;
+    }
+
+    public void setInventoryDate(LocalDateTime inventoryDate) {
+        this.inventoryDate = inventoryDate;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -119,35 +132,47 @@ public class SaleItemResponse {
         this.createdAt = createdAt;
     }
 
-    public BigDecimal getDiscountAmount() {
-        return discountAmount;
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setDiscountAmount(BigDecimal discountAmount) {
-        this.discountAmount = discountAmount;
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
-    public BigDecimal getDiscountedUnitPrice() {
-        return discountedUnitPrice;
+    // Business methods
+    public BigDecimal getGrossProfit() {
+        if (inventoryUnitPrice != null && unitPrice != null && quantity != null) {
+            BigDecimal costOfGoodsSold = inventoryUnitPrice.multiply(BigDecimal.valueOf(quantity));
+            return lineTotal.subtract(costOfGoodsSold);
+        }
+        return BigDecimal.ZERO;
     }
 
-    public void setDiscountedUnitPrice(BigDecimal discountedUnitPrice) {
-        this.discountedUnitPrice = discountedUnitPrice;
+    public BigDecimal getGrossProfitMargin() {
+        if (lineTotal != null && lineTotal.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal grossProfit = getGrossProfit();
+            return grossProfit.divide(lineTotal, 4, BigDecimal.ROUND_HALF_UP).multiply(BigDecimal.valueOf(100));
+        }
+        return BigDecimal.ZERO;
     }
 
-    public BigDecimal getSubtotalBeforeDiscount() {
-        return subtotalBeforeDiscount;
-    }
-
-    public void setSubtotalBeforeDiscount(BigDecimal subtotalBeforeDiscount) {
-        this.subtotalBeforeDiscount = subtotalBeforeDiscount;
-    }
-
-    public String getSaleItemDescription() {
-        return saleItemDescription;
-    }
-
-    public void setSaleItemDescription(String saleItemDescription) {
-        this.saleItemDescription = saleItemDescription;
+    @Override
+    public String toString() {
+        return "SaleItemResponse{" +
+                "id=" + id +
+                ", saleId=" + saleId +
+                ", productId=" + productId +
+                ", productCode='" + productCode + '\'' +
+                ", productName='" + productName + '\'' +
+                ", quantity=" + quantity +
+                ", unitPrice=" + unitPrice +
+                ", discount=" + discount +
+                ", lineTotal=" + lineTotal +
+                ", inventoryId=" + inventoryId +
+                ", inventoryUnitPrice=" + inventoryUnitPrice +
+                ", inventoryDate=" + inventoryDate +
+                ", createdAt=" + createdAt +
+                '}';
     }
 }

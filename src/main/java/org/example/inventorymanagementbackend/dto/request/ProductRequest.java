@@ -1,9 +1,14 @@
 package org.example.inventorymanagementbackend.dto.request;
 
-import jakarta.validation.constraints.*;
-import lombok.Data;
-
 import java.math.BigDecimal;
+
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 @Data
 public class ProductRequest {
@@ -18,8 +23,8 @@ public class ProductRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
-    @NotNull(message = "Fixed price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Fixed price must be greater than 0")
+    //@NotNull(message = "Fixed price is required")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Fixed price canot be negitive")
     @Digits(integer = 8, fraction = 2, message = "Invalid price format")
     private BigDecimal fixedPrice;
 
@@ -27,16 +32,26 @@ public class ProductRequest {
     @DecimalMax(value = "100.0", message = "Discount cannot exceed 100%")
     private BigDecimal discount;
 
-    @NotNull(message = "Low stock threshold is required")
+    // ADD THIS FIELD - This was missing!
+    @Min(value = 0, message = "Current stock cannot be negative")
+    private Integer currentStock;
+
+    
     @Min(value = 0, message = "Low stock threshold cannot be negative")
     private Integer lowStockThreshold;
 
-    public ProductRequest(String code, String name, String description, BigDecimal fixedPrice, BigDecimal discount, Integer lowStockThreshold) {
+    // Default constructor
+    public ProductRequest() {}
+
+    // Updated constructor to include currentStock
+    public ProductRequest(String code, String name, String description, BigDecimal fixedPrice, 
+                         BigDecimal discount, Integer currentStock, Integer lowStockThreshold) {
         this.code = code;
         this.name = name;
         this.description = description;
         this.fixedPrice = fixedPrice;
         this.discount = discount;
+        this.currentStock = currentStock;
         this.lowStockThreshold = lowStockThreshold;
     }
 
@@ -80,6 +95,15 @@ public class ProductRequest {
         this.discount = discount;
     }
 
+    // ADD THESE GETTER AND SETTER METHODS - These were missing!
+    public Integer getCurrentStock() {
+        return currentStock;
+    }
+
+    public void setCurrentStock(Integer currentStock) {
+        this.currentStock = currentStock;
+    }
+
     public Integer getLowStockThreshold() {
         return lowStockThreshold;
     }
@@ -87,5 +111,5 @@ public class ProductRequest {
     public void setLowStockThreshold(Integer lowStockThreshold) {
         this.lowStockThreshold = lowStockThreshold;
     }
+    
 }
-

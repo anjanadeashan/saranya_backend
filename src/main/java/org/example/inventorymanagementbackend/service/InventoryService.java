@@ -17,6 +17,7 @@ import org.example.inventorymanagementbackend.entity.Supplier;
 import org.example.inventorymanagementbackend.mapper.InventoryMapper;
 import org.example.inventorymanagementbackend.repository.InventoryRepository;
 import org.example.inventorymanagementbackend.repository.ProductRepository;
+import org.example.inventorymanagementbackend.repository.SupplierRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +42,10 @@ public class InventoryService {
     @Autowired
     private SupplierService supplierService;
 
-    
+    @Autowired
+    private SupplierRepository supplierRepository;
+
+
 
     // Custom Exceptions
     public static class InventoryValidationException extends RuntimeException {
@@ -280,6 +284,7 @@ public class InventoryService {
             Inventory.MovementType movementType = parseMovementType(request.getMovementType());
             inventory.setMovementType(movementType);
 
+            // Handle payment tracking fields for IN movements
             if (movementType == Inventory.MovementType.IN) {
                 if (request.getSupplierId() == null) {
                     logger.error("Supplier ID is null for IN movement");
@@ -288,9 +293,80 @@ public class InventoryService {
 
                 logger.debug("Looking for supplier with ID: {}", request.getSupplierId());
                 Supplier supplier = supplierService.getSupplierEntityById(request.getSupplierId());
-
                 logger.debug("Found supplier: {} (ID: {})", supplier.getName(), supplier.getId());
                 inventory.setSupplier(supplier);
+
+                // Set payment tracking fields
+                if (request.getPurchasePrice() != null) {
+                    inventory.setPurchasePrice(request.getPurchasePrice());
+                    logger.debug("Set purchase price: {}", request.getPurchasePrice());
+                }
+
+                // Convert string payment method to enum
+                if (request.getPaymentMethod() != null && !request.getPaymentMethod().trim().isEmpty()) {
+                    try {
+                        inventory.setPaymentMethod(
+                            org.example.inventorymanagementbackend.enums.PaymentMethod.valueOf(
+                                request.getPaymentMethod().toUpperCase()
+                            )
+                        );
+                        logger.debug("Set payment method: {}", request.getPaymentMethod());
+                    } catch (IllegalArgumentException e) {
+                        logger.warn("Invalid payment method: {}, defaulting to CASH", request.getPaymentMethod());
+                        inventory.setPaymentMethod(org.example.inventorymanagementbackend.enums.PaymentMethod.CASH);
+                    }
+                }
+
+                // Convert string payment status to enum
+                if (request.getPaymentStatus() != null && !request.getPaymentStatus().trim().isEmpty()) {
+                    try {
+                        inventory.setPaymentStatus(
+                            org.example.inventorymanagementbackend.enums.PaymentStatus.valueOf(
+                                request.getPaymentStatus().toUpperCase()
+                            )
+                        );
+                        logger.debug("Set payment status: {}", request.getPaymentStatus());
+                    } catch (IllegalArgumentException e) {
+                        logger.warn("Invalid payment status: {}, defaulting to PENDING", request.getPaymentStatus());
+                        inventory.setPaymentStatus(org.example.inventorymanagementbackend.enums.PaymentStatus.PENDING);
+                    }
+                }
+
+                if (request.getPaidAmount() != null) {
+                    inventory.setPaidAmount(request.getPaidAmount());
+                    logger.debug("Set paid amount: {}", request.getPaidAmount());
+                }
+
+                if (request.getCheckNumber() != null) {
+                    inventory.setCheckNumber(request.getCheckNumber());
+                }
+
+                if (request.getCheckDate() != null) {
+                    inventory.setCheckDate(request.getCheckDate());
+                }
+
+                if (request.getNotes() != null) {
+                    inventory.setNotes(request.getNotes());
+                }
+
+                // Update supplier financial tracking
+                if (request.getPurchasePrice() != null && request.getQuantity() != null) {
+                    BigDecimal totalCost = request.getPurchasePrice().multiply(
+                        BigDecimal.valueOf(request.getQuantity())
+                    );
+
+                    // Determine if the purchase is fully paid
+                    boolean isPaid = false;
+                    if (inventory.getPaymentStatus() == org.example.inventorymanagementbackend.enums.PaymentStatus.PAID) {
+                        isPaid = true;
+                    }
+
+                    supplier.addPurchase(totalCost, isPaid);
+                    supplierRepository.save(supplier);
+                    logger.debug("Updated supplier financial tracking - Total cost: {}, Paid: {}", totalCost, isPaid);
+                    logger.info("Saved supplier with updated balances - Outstanding: {}, Total Purchases: {}, Total Paid: {}",
+                        supplier.getOutstandingBalance(), supplier.getTotalPurchases(), supplier.getTotalPaid());
+                }
             }
 
             if (movementType == Inventory.MovementType.OUT) {
@@ -354,7 +430,7 @@ public class InventoryService {
             
             details.put("productId", productId);
             details.put("productName", product.getName());
-            details.put("productCode", product.getProductCode());
+            details.put("productCode", product.getCode());
             details.put("inventoryTotal", inventoryTotal);
             details.put("productStock", productStock);
             details.put("activeBatchCount", activeBatches.size());
@@ -394,7 +470,7 @@ public class InventoryService {
                 String error = String.format(
                     "Insufficient stock for product '%s' (ID: %d, Code: %s). " +
                     "Required: %d, Available: %d, Shortfall: %d",
-                    product.getName(), productId, product.getProductCode(),
+                    product.getName(), productId, product.getCode(),
                     requiredQuantity, availableStock, (requiredQuantity - availableStock));
                 
                 logger.warn("Stock validation failed: {}", error);

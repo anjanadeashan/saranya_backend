@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.example.inventorymanagementbackend.enums.PaymentMethod;
+import org.example.inventorymanagementbackend.enums.PaymentStatus;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -90,31 +92,35 @@ public class Inventory {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
 
-    // Add these fields to your Inventory entity class
+    @Column(name = "minimum_stock")
+    private Integer minimumStock;
 
-@Column(name = "expiry_date")
-private LocalDate expiryDate;
+    // Payment Tracking Fields
+    @Column(name = "purchase_price", precision = 10, scale = 2)
+    private BigDecimal purchasePrice;
 
-@Column(name = "minimum_stock")
-private Integer minimumStock;
+    @Column(name = "payment_method")
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
 
-// Add getters and setters
-public LocalDate getExpiryDate() {
-    return expiryDate;
-}
+    @Column(name = "payment_status")
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
-public void setExpiryDate(LocalDate expiryDate) {
-    this.expiryDate = expiryDate;
-}
+    @Column(name = "paid_amount", precision = 10, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
 
-public Integer getMinimumStock() {
-    return minimumStock;
-}
+    @Column(name = "check_number", length = 100)
+    private String checkNumber;
 
-public void setMinimumStock(Integer minimumStock) {
-    this.minimumStock = minimumStock;
-}
+    @Column(name = "check_date")
+    private LocalDate checkDate;
+
+    @Column(name = "notes", length = 1000)
+    private String notes;
 
     // Movement Type Enum
     public enum MovementType {
@@ -374,6 +380,80 @@ public void setMinimumStock(Integer minimumStock) {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    // Getters and setters for expiry date and minimum stock
+    public LocalDate getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
+    public Integer getMinimumStock() {
+        return minimumStock;
+    }
+
+    public void setMinimumStock(Integer minimumStock) {
+        this.minimumStock = minimumStock;
+    }
+
+    // Payment Tracking Getters and Setters
+    public BigDecimal getPurchasePrice() {
+        return purchasePrice;
+    }
+
+    public void setPurchasePrice(BigDecimal purchasePrice) {
+        this.purchasePrice = purchasePrice;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public PaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(PaymentStatus paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public BigDecimal getPaidAmount() {
+        return paidAmount;
+    }
+
+    public void setPaidAmount(BigDecimal paidAmount) {
+        this.paidAmount = paidAmount;
+    }
+
+    public String getCheckNumber() {
+        return checkNumber;
+    }
+
+    public void setCheckNumber(String checkNumber) {
+        this.checkNumber = checkNumber;
+    }
+
+    public LocalDate getCheckDate() {
+        return checkDate;
+    }
+
+    public void setCheckDate(LocalDate checkDate) {
+        this.checkDate = checkDate;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     // Utility methods for debugging

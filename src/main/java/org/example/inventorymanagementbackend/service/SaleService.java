@@ -325,10 +325,10 @@ public class SaleService {
             logger.debug("Product {}: Required={}, Available={}", product.getName(), totalRequired, currentAvailable);
 
             if (currentAvailable < totalRequired) {
-                String error = String.format("Insufficient stock for product '%s' (Code: %s). Required: %d, Available: %d, Shortfall: %d", 
-                    product.getName(), 
-                    product.getProductCode(), 
-                    totalRequired, 
+                String error = String.format("Insufficient stock for product '%s' (Code: %s). Required: %d, Available: %d, Shortfall: %d",
+                    product.getName(),
+                    product.getCode(),
+                    totalRequired,
                     currentAvailable,
                     (totalRequired - currentAvailable));
                 stockErrors.add(error);

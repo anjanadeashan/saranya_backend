@@ -1,12 +1,12 @@
 package org.example.inventorymanagementbackend.dto.response;
 
 import lombok.Data;
-import org.example.inventorymanagementbackend.entity.Supplier;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-public class SupplierResponse extends Supplier {
+public class SupplierResponse {
 
     private Long id;
     private String uniqueSupplierCode;
@@ -20,6 +20,12 @@ public class SupplierResponse extends Supplier {
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Financial Tracking Fields
+    private BigDecimal outstandingBalance;
+    private BigDecimal totalPurchases;
+    private BigDecimal totalPaid;
+    private LocalDateTime lastPurchaseDate;
 
     // Computed fields from entity business logic methods
     private String fullContactInfo;
@@ -98,11 +104,11 @@ public class SupplierResponse extends Supplier {
         this.country = country;
     }
 
-    public Boolean getActive() {
+    public Boolean getIsActive() {
         return isActive;
     }
 
-    public void setActive(Boolean active) {
+    public void setIsActive(Boolean active) {
         isActive = active;
     }
 
@@ -144,5 +150,38 @@ public class SupplierResponse extends Supplier {
 
     public void setHasCompleteContactInfo(boolean hasCompleteContactInfo) {
         this.hasCompleteContactInfo = hasCompleteContactInfo;
+    }
+
+    // Financial Tracking Getters and Setters
+    public BigDecimal getOutstandingBalance() {
+        return outstandingBalance;
+    }
+
+    public void setOutstandingBalance(BigDecimal outstandingBalance) {
+        this.outstandingBalance = outstandingBalance;
+    }
+
+    public BigDecimal getTotalPurchases() {
+        return totalPurchases;
+    }
+
+    public void setTotalPurchases(BigDecimal totalPurchases) {
+        this.totalPurchases = totalPurchases;
+    }
+
+    public BigDecimal getTotalPaid() {
+        return totalPaid;
+    }
+
+    public void setTotalPaid(BigDecimal totalPaid) {
+        this.totalPaid = totalPaid;
+    }
+
+    public LocalDateTime getLastPurchaseDate() {
+        return lastPurchaseDate;
+    }
+
+    public void setLastPurchaseDate(LocalDateTime lastPurchaseDate) {
+        this.lastPurchaseDate = lastPurchaseDate;
     }
 }

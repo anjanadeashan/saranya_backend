@@ -2,6 +2,7 @@ package org.example.inventorymanagementbackend.entity;
 
 
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -96,6 +97,19 @@ public class Supplier {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // Financial Tracking Fields
+    @Column(name = "outstanding_balance", precision = 10, scale = 2)
+    private BigDecimal outstandingBalance = BigDecimal.ZERO;
+
+    @Column(name = "total_purchases", precision = 10, scale = 2)
+    private BigDecimal totalPurchases = BigDecimal.ZERO;
+
+    @Column(name = "total_paid", precision = 10, scale = 2)
+    private BigDecimal totalPaid = BigDecimal.ZERO;
+
+    @Column(name = "last_purchase_date")
+    private LocalDateTime lastPurchaseDate;
 
     // Relationships
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -278,5 +292,83 @@ public class Supplier {
 
     public void setInventoryMovements(List<Inventory> inventoryMovements) {
         this.inventoryMovements = inventoryMovements;
+    }
+
+    // Financial Tracking Getters and Setters
+    public BigDecimal getOutstandingBalance() {
+        return outstandingBalance;
+    }
+
+    public void setOutstandingBalance(BigDecimal outstandingBalance) {
+        this.outstandingBalance = outstandingBalance;
+    }
+
+    public BigDecimal getTotalPurchases() {
+        return totalPurchases;
+    }
+
+    public void setTotalPurchases(BigDecimal totalPurchases) {
+        this.totalPurchases = totalPurchases;
+    }
+
+    public BigDecimal getTotalPaid() {
+        return totalPaid;
+    }
+
+    public void setTotalPaid(BigDecimal totalPaid) {
+        this.totalPaid = totalPaid;
+    }
+
+    public LocalDateTime getLastPurchaseDate() {
+        return lastPurchaseDate;
+    }
+
+    public void setLastPurchaseDate(LocalDateTime lastPurchaseDate) {
+        this.lastPurchaseDate = lastPurchaseDate;
+    }
+
+    // Financial Tracking Business Logic Methods
+
+    /**
+     * Add a purchase to this supplier's financial tracking
+     * @param amount Total purchase amount
+     * @param isPaid Whether the purchase was paid immediately
+     */
+    public void addPurchase(BigDecimal amount, boolean isPaid) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Purchase amount cannot be null or negative");
+        }
+
+        this.totalPurchases = this.totalPurchases.add(amount);
+
+        if (isPaid) {
+            this.totalPaid = this.totalPaid.add(amount);
+        } else {
+            this.outstandingBalance = this.outstandingBalance.add(amount);
+        }
+
+        this.lastPurchaseDate = LocalDateTime.now();
+    }
+
+    /**
+     * Record a payment made to this supplier
+     * @param amount Payment amount
+     */
+    public void recordPayment(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive");
+        }
+
+        if (amount.compareTo(this.outstandingBalance) > 0) {
+            throw new IllegalArgumentException("Payment amount cannot exceed outstanding balance");
+        }
+
+        this.totalPaid = this.totalPaid.add(amount);
+        this.outstandingBalance = this.outstandingBalance.subtract(amount);
+
+        // Ensure outstanding balance doesn't go negative due to rounding
+        if (this.outstandingBalance.compareTo(BigDecimal.ZERO) < 0) {
+            this.outstandingBalance = BigDecimal.ZERO;
+        }
     }
 }

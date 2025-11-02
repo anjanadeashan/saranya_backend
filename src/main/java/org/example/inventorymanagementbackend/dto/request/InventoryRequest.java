@@ -1,5 +1,7 @@
 package org.example.inventorymanagementbackend.dto.request;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.AssertTrue;
@@ -40,6 +42,15 @@ public class InventoryRequest {
     @Size(max = 200, message = "Reference must not exceed 200 characters")
     private String reference;
 
+    // Payment Tracking Fields
+    private BigDecimal purchasePrice;
+    private String paymentMethod;  // String in DTO, will be converted to enum
+    private String paymentStatus;  // String in DTO, will be converted to enum
+    private BigDecimal paidAmount;
+    private String checkNumber;
+    private LocalDate checkDate;
+    private String notes;
+
     // Custom validation method
     @AssertTrue(message = "Supplier is required for stock IN movements")
     public boolean isSupplierValidForStockIn() {
@@ -49,5 +60,62 @@ public class InventoryRequest {
     @AssertTrue(message = "Supplier should not be specified for stock OUT movements")
     public boolean isSupplierValidForStockOut() {
         return !"OUT".equals(movementType) || supplierId == null;
+    }
+
+    // Payment Tracking Getters and Setters
+    public BigDecimal getPurchasePrice() {
+        return purchasePrice;
+    }
+
+    public void setPurchasePrice(BigDecimal purchasePrice) {
+        this.purchasePrice = purchasePrice;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public BigDecimal getPaidAmount() {
+        return paidAmount;
+    }
+
+    public void setPaidAmount(BigDecimal paidAmount) {
+        this.paidAmount = paidAmount;
+    }
+
+    public String getCheckNumber() {
+        return checkNumber;
+    }
+
+    public void setCheckNumber(String checkNumber) {
+        this.checkNumber = checkNumber;
+    }
+
+    public LocalDate getCheckDate() {
+        return checkDate;
+    }
+
+    public void setCheckDate(LocalDate checkDate) {
+        this.checkDate = checkDate;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.example.inventorymanagementbackend.entity.Inventory;
 import org.example.inventorymanagementbackend.entity.Product;
 import org.example.inventorymanagementbackend.entity.Supplier;
+import org.example.inventorymanagementbackend.enums.PaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -167,5 +168,10 @@ List<Inventory> findDepletedInventories();
 @Query("DELETE FROM Inventory i WHERE i.quantity = 0")
 void deleteDepletedInventories();
 
+    /**
+     * Find inventory movements by payment status and movement type
+     * Used to find pending payments
+     */
+    List<Inventory> findByPaymentStatusAndMovementType(PaymentStatus paymentStatus, Inventory.MovementType movementType);
 
 }

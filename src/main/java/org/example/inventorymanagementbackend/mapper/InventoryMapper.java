@@ -21,6 +21,10 @@ public interface InventoryMapper {
     @Mapping(target = "supplierCode", source = "supplier.uniqueSupplierCode")
     @Mapping(target = "supplierName", source = "supplier.name")
     @Mapping(target = "movementDescription", source = ".", qualifiedByName = "getMovementDescription")
+    @Mapping(target = "paymentMethod", source = ".", qualifiedByName = "mapPaymentMethod")
+    @Mapping(target = "paymentStatus", source = ".", qualifiedByName = "mapPaymentStatus")
+    @Mapping(target = "totalCost", source = ".", qualifiedByName = "calculateTotalCost")
+    @Mapping(target = "remainingAmount", source = ".", qualifiedByName = "calculateRemainingAmount")
     InventoryResponse toResponse(Inventory inventory);
 
     /**
@@ -65,5 +69,57 @@ public interface InventoryMapper {
         }
 
         return description.toString();
+    }
+
+    /**
+     * Map PaymentMethod enum to String
+     */
+    @Named("mapPaymentMethod")
+    default String mapPaymentMethod(Inventory inventory) {
+        if (inventory == null || inventory.getPaymentMethod() == null) {
+            return null;
+        }
+        return inventory.getPaymentMethod().name();
+    }
+
+    /**
+     * Map PaymentStatus enum to String
+     */
+    @Named("mapPaymentStatus")
+    default String mapPaymentStatus(Inventory inventory) {
+        if (inventory == null || inventory.getPaymentStatus() == null) {
+            return null;
+        }
+        return inventory.getPaymentStatus().name();
+    }
+
+    /**
+     * Calculate total cost (quantity * purchasePrice)
+     */
+    @Named("calculateTotalCost")
+    default java.math.BigDecimal calculateTotalCost(Inventory inventory) {
+        if (inventory == null || inventory.getPurchasePrice() == null || inventory.getQuantity() == null) {
+            return null;
+        }
+        return inventory.getPurchasePrice().multiply(java.math.BigDecimal.valueOf(inventory.getQuantity()));
+    }
+
+    /**
+     * Calculate remaining amount (totalCost - paidAmount)
+     */
+    @Named("calculateRemainingAmount")
+    default java.math.BigDecimal calculateRemainingAmount(Inventory inventory) {
+        if (inventory == null || inventory.getPurchasePrice() == null || inventory.getQuantity() == null) {
+            return null;
+        }
+        java.math.BigDecimal totalCost = inventory.getPurchasePrice()
+            .multiply(java.math.BigDecimal.valueOf(inventory.getQuantity()));
+
+        java.math.BigDecimal paidAmount = inventory.getPaidAmount();
+        if (paidAmount == null) {
+            paidAmount = java.math.BigDecimal.ZERO;
+        }
+
+        return totalCost.subtract(paidAmount);
     }
 }

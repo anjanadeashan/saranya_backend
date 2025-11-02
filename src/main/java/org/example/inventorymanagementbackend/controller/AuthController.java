@@ -1,5 +1,5 @@
 package org.example.inventorymanagementbackend.controller;
-import org.example.inventorymanagementbackend.dto.request.LoginRequest;
+
 import org.example.inventorymanagementbackend.dto.request.LoginRequest;
 import org.example.inventorymanagementbackend.security.JwtTokenProvider;
 import org.slf4j.Logger;
@@ -45,7 +45,6 @@ public class AuthController {
             String jwt = jwtTokenProvider.generateToken(authentication);
 
             logger.info("Login successful for username: {}", loginRequest.getUsername());
-            logger.debug("Generated JWT token: {}", jwt.substring(0, 20) + "..."); // Debug line
 
             // Create response with token
             Map<String, Object> response = new HashMap<>();
@@ -75,5 +74,39 @@ public class AuthController {
         response.put("message", "User logged out successfully");
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        logger.info("Token validation request received");
+
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                logger.warn("Invalid or missing Authorization header");
+                return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Missing or invalid token"));
+            }
+
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            logger.debug("Validating token: {}...", token.substring(0, Math.min(20, token.length())));
+
+            if (jwtTokenProvider.validateToken(token)) {
+                String username = jwtTokenProvider.getUsernameFromToken(token);
+                logger.info("Token validated successfully for user: {}", username);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("valid", true);
+                response.put("username", username);
+                response.put("message", "Token is valid");
+
+                return ResponseEntity.ok(response);
+            } else {
+                logger.warn("Token validation failed - invalid token");
+                return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Invalid token"));
+            }
+
+        } catch (Exception e) {
+            logger.error("Token validation error: ", e);
+            return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Token validation failed"));
+        }
     }
 }

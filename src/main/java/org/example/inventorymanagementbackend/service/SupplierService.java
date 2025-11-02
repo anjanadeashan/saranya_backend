@@ -1,5 +1,6 @@
 package org.example.inventorymanagementbackend.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -136,5 +137,28 @@ public class SupplierService {
             logger.error("Error deleting supplier with id {}: ", id, e);
             throw new RuntimeException("Failed to delete supplier", e);
         }
+    }
+
+    /**
+     * Record a payment made to a supplier
+     * @param supplierId Supplier ID
+     * @param amount Payment amount
+     */
+    public void recordSupplierPayment(Long supplierId, BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Payment amount must be positive");
+        }
+
+        Supplier supplier = supplierRepository.findById(supplierId)
+                .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + supplierId));
+
+        if (supplier.getOutstandingBalance().compareTo(BigDecimal.ZERO) == 0) {
+            throw new IllegalArgumentException("Supplier has no outstanding balance");
+        }
+
+        supplier.recordPayment(amount);
+        supplierRepository.save(supplier);
+
+        logger.info("Recorded payment of {} for supplier: {}", amount, supplier.getName());
     }
 }

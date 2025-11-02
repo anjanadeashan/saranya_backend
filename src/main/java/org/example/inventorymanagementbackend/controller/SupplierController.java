@@ -1,5 +1,6 @@
 package org.example.inventorymanagementbackend.controller;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.example.inventorymanagementbackend.dto.request.SupplierRequest;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -109,6 +111,42 @@ public class SupplierController {
             logger.error("Error deleting supplier with id: {}", id, e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Failed to delete supplier"));
+        }
+    }
+
+    /**
+     * Record a payment made to a supplier
+     */
+    @PutMapping("/{id}/payment")
+    public ResponseEntity<ApiResponse<String>> recordSupplierPayment(
+            @PathVariable Long id,
+            @RequestParam BigDecimal amount) {
+        try {
+            supplierService.recordSupplierPayment(id, amount);
+            return ResponseEntity.ok(ApiResponse.success("Payment recorded successfully", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error recording payment for supplier: " + id, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to record payment"));
+        }
+    }
+
+    /**
+     * Get supplier financial summary
+     */
+    @GetMapping("/{id}/financial-summary")
+    public ResponseEntity<ApiResponse<SupplierResponse>> getSupplierFinancialSummary(
+            @PathVariable Long id) {
+        try {
+            SupplierResponse summary = supplierService.getSupplierById(id);
+            return ResponseEntity.ok(ApiResponse.success(summary));
+        } catch (Exception e) {
+            logger.error("Error fetching financial summary for supplier: " + id, e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Failed to fetch financial summary"));
         }
     }
 }

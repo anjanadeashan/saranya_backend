@@ -23,8 +23,7 @@ public class ProductRequest {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
-    //@NotNull(message = "Fixed price is required")
-    @DecimalMin(value = "0.0", inclusive = true, message = "Fixed price canot be negitive")
+    @DecimalMin(value = "0.01", inclusive = true, message = "Fixed price must be greater than 0")
     @Digits(integer = 8, fraction = 2, message = "Invalid price format")
     private BigDecimal fixedPrice;
 

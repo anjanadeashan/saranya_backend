@@ -100,25 +100,6 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<SaleItem> saleItems;
 
-
-
-
-
-
-    @Column(name = "product_code", unique = true)
-private String productCode;
-
-public String getProductCode() {
-    return productCode;
-}
-
-public void setProductCode(String productCode) {
-    this.productCode = productCode;
-}
-
-
-
-
     // Business Logic Methods
 
     /**
